@@ -119,8 +119,8 @@ if __name__ == "__main__":
     
     # Split data
     n = int(0.8 * len(data)) 
-    train_data = data[n:]
-    val_data = data[:n]
+    train_data = data[:n]
+    val_data = data[n:]
     #
     print(f"Vocab size: {vocab_size}")
     print(f"Training on {len(train_data)} tokens")
