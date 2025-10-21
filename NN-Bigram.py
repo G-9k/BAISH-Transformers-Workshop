@@ -11,7 +11,8 @@ class NeuralBigram(nn.Module):
         super().__init__()
         # TODO: Create embedding table (vocab_size, vocab_size)
         # This learns the same thing as the count table, but via optimization
-        pass
+
+        self.embeddingTable = torch.rand((vocab_size, vocab_size))
     
     def forward(self, idx):
         """
@@ -24,6 +25,7 @@ class NeuralBigram(nn.Module):
         # Hint: if idx.dim() == 2: idx = idx.squeeze(-1)
         
         # TODO: Pass idx through embedding table to get logits
+        
         pass
     
     def generate(self, idx, max_new_tokens):
