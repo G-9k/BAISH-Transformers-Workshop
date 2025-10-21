@@ -11,7 +11,8 @@ class NeuralBigram(nn.Module):
         super().__init__()
         # TODO: Create embedding table (vocab_size, vocab_size)
         # This learns the same thing as the count table, but via optimization
-        pass
+        self.vocabSize = vocab_size
+        self.embeddingTable = nn.Embedding(vocab_size, vocab_size)
     
     def forward(self, idx):
         """
@@ -21,27 +22,30 @@ class NeuralBigram(nn.Module):
             logits: (batch, vocab_size) predictions for next token
         """
         # TODO: Handle both (batch,) and (batch, 1) shapes
+        if idx.dim() == 1:
+            idx = idx.unsqueeze(-1) # agregamos una dimensión al final
 
         # TODO: Pass idx through embedding table to get logits
-        pass
+        logits = self.embeddingTable(idx).squeeze(1)
+        return logits
     
     def generate(self, idx, max_new_tokens):
         """Generate text by sampling from the learned distribution."""
         for _ in range(max_new_tokens):
             # TODO: Get last token
-            current = None  # idx[:, -1:]
+            current = idx[:, -1:]
             
             # TODO: Get predictions
-            logits = None
+            logits = self(current)
             
             # TODO: Apply softmax to get probabilities
-            probs = None
+            probs = torch.softmax(logits,-1)
             
             # TODO: Sample next token
-            idx_next = None
+            idx_next = torch.multinomial(probs, 1)
             
             # TODO: Append to sequence
-            idx = None
+            idx = torch.cat((idx, idx_next), 1)
         
         return idx
 
@@ -52,13 +56,13 @@ def get_batch(data, batch_size):
     Returns context (bigram uses 1 token) and targets.
     """
     # TODO: Sample random indices (not too close to end)
-    ix = None  
+    ix = torch.randint(0, len(data)-10, (batch_size,))
     
     # TODO: Get current tokens as context
-    x = None 
+    x = data[ix]
     
     # TODO: Get next tokens as targets
-    y = None
+    y = data[ix+1]
     
     return x, y
 
@@ -71,10 +75,11 @@ def estimate_loss(model, data, batch_size, eval_iters=100):
     for k in range(eval_iters):
         X, Y = get_batch(data, batch_size)
         # TODO: Get model predictions
-        logits = None
+        logits = model.forward(X)
+
         
         # TODO: Calculate cross-entropy loss
-        loss = None
+        loss = F.cross_entropy(logits, Y)
         
         losses[k] = loss.item()
     
@@ -84,10 +89,10 @@ def estimate_loss(model, data, batch_size, eval_iters=100):
 
 if __name__ == "__main__":
     # Hyperparameters
-    batch_size = 32
-    max_iters = 5000
+    batch_size = 128
+    max_iters = 10000
     eval_interval = 500
-    learning_rate = 1.0
+    learning_rate = 3.0
     
     # Load and encode data
     with open('Dataset/Anne_of_Green_Gables.txt', 'r', encoding='utf-8') as f:
@@ -109,23 +114,28 @@ if __name__ == "__main__":
     print(f"Training on {len(train_data)} tokens")
     
     # TODO: Create model
-    model = None
+    model = NeuralBigram(vocab_size)
     
     # TODO: Create optimizer
-    optimizer = None
+    optimizer = torch.optim.SGD(model.parameters(), learning_rate)
     
     # Training loop
     for iter in range(max_iters):
         # TODO: Get batch
-        xb, yb = None, None
+        xb, yb = get_batch(data, batch_size)
         
         # TODO: Forward pass
-        logits = None  
+        logits = model.forward(xb) 
         
         # TODO: Calculate loss
-        loss = None
+        loss = F.cross_entropy(logits, yb)
         
         # TODO: Backward pass
+        optimizer.zero_grad()
+
+        loss.backward()
+        
+        optimizer.step()
         
         if iter % eval_interval == 0 or iter == max_iters - 1:
             train_loss = estimate_loss(model, train_data, batch_size)
