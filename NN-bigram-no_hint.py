@@ -12,7 +12,8 @@ class NeuralBigram(nn.Module):
         # TODO: Create embedding table (vocab_size, vocab_size)
         # This learns the same thing as the count table, but via optimization
         self.vocabSize = vocab_size
-        self.embeddingTable = nn.Embedding(vocab_size, vocab_size)
+        self.embeddingTable1 = nn.Embedding(vocab_size, vocab_size)
+        self.embeddingTable2 = nn.Embedding(vocab_size, vocab_size)
     
     def forward(self, idx):
         """
@@ -26,17 +27,21 @@ class NeuralBigram(nn.Module):
             idx = idx.unsqueeze(-1) # agregamos una dimensión al final
 
         # TODO: Pass idx through embedding table to get logits
-        logits = self.embeddingTable(idx).squeeze(1)
+        idx_0 = idx[:, 0]
+        idx_1 = idx[:, 1]
+        logits_0 = self.embeddingTable1(idx_0).squeeze(1)
+        logits_1 = self.embeddingTable2(idx_1).squeeze(1)
+        logits = logits_0 + logits_1
         return logits
     
     def generate(self, idx, max_new_tokens):
         """Generate text by sampling from the learned distribution."""
         for _ in range(max_new_tokens):
             # TODO: Get last token
-            current = idx[:, -1:]
+            currents = idx[:, -2:]
             
             # TODO: Get predictions
-            logits = self(current)
+            logits = self(currents)
             
             # TODO: Apply softmax to get probabilities
             probs = torch.softmax(logits,-1)
@@ -59,10 +64,12 @@ def get_batch(data, batch_size):
     ix = torch.randint(0, len(data)-10, (batch_size,))
     
     # TODO: Get current tokens as context
-    x = data[ix]
+    x1 = data[ix]
+    x2 = data[ix+1]
+    x = torch.stack((x1,x2), dim=1)
     
     # TODO: Get next tokens as targets
-    y = data[ix+1]
+    y = data[ix+2]
     
     return x, y
 
@@ -89,13 +96,13 @@ def estimate_loss(model, data, batch_size, eval_iters=100):
 
 if __name__ == "__main__":
     # Hyperparameters
-    batch_size = 128
-    max_iters = 10000
+    batch_size = 32
+    max_iters = 5000
     eval_interval = 500
-    learning_rate = 3.0
+    learning_rate = 1e-2
     
     # Load and encode data
-    with open('Dataset/Anne_of_Green_Gables.txt', 'r', encoding='utf-8') as f:
+    with open('Dataset/Caelis.txt', 'r', encoding='utf-8') as f:
         text = f.read()
     
     chars = sorted(list(set(text)))
@@ -106,7 +113,7 @@ if __name__ == "__main__":
     decode = lambda l: ''.join([itos[i] for i in l])
     
     data = torch.tensor(encode(text), dtype=torch.long)
-    n = int(0.9 * len(data))
+    n = int(0.8 * len(data))
     train_data = data[:n]
     val_data = data[n:]
     
@@ -117,7 +124,7 @@ if __name__ == "__main__":
     model = NeuralBigram(vocab_size)
     
     # TODO: Create optimizer
-    optimizer = torch.optim.SGD(model.parameters(), learning_rate)
+    optimizer = torch.optim.Adam(model.parameters(), learning_rate)
     
     # Training loop
     for iter in range(max_iters):
@@ -144,5 +151,5 @@ if __name__ == "__main__":
     
     # Generate
     print("\nGenerated text:")
-    context = torch.zeros((1, 1), dtype=torch.long)
+    context = torch.zeros((1, 2), dtype=torch.long)
     print(decode(model.generate(context, 500)[0].tolist()))
