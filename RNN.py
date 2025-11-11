@@ -17,7 +17,9 @@ class RNNLanguageModel(nn.Module):
         # TODO: Create RNN layer
         # Hint: nn.RNN(input_size, hidden_size, batch_first=True)
         # batch_first=True means input/output shapes are (batch, seq, feature)
-        self.rnn = nn.RNN(embed_dim, hidden_size, batch_first=True)
+        self.lstm = nn.LSTM(embed_dim, hidden_size, batch_first=True)
+
+        #self.rnn2 = nn.RNN(hidden_size, hidden_size, batch_first=True)
         
         # TODO: Create output layer
         # Hint: nn.Linear(hidden_size, vocab_size)
@@ -40,7 +42,7 @@ class RNNLanguageModel(nn.Module):
         # Hint: output, hidden = self.rnn(embeddings, hidden)
         # output shape: (batch, seq_len, hidden_size)
         # hidden shape: (1, batch, hidden_size)
-        output, hiddLayer = self.rnn(embeddings, hidden)
+        output, hiddLayer = self.lstm(embeddings, hidden)
         
         # TODO: Take last timestep output
         # Hint: output[:, -1, :]
@@ -104,15 +106,15 @@ def estimate_loss(model, data, context_length, batch_size, eval_iters=100):
 if __name__ == "__main__":
     # Hyperparameters
     batch_size = 64
-    num_epochs = 10
+    num_epochs = 50
     steps_per_epoch = 1000
     eval_interval = 2
-    learning_rate = 1e-3
+    learning_rate = 1e-2
     
     # Model hyperparameters
-    context_length = 64        # RNNs can handle longer sequences
-    embed_dim = 32
-    hidden_size = 128          # RNN hidden state size
+    context_length = 16        # RNNs can handle longer sequences
+    embed_dim = 40
+    hidden_size = 80         # RNN hidden state size
     
     # ... rest of training code same as MLP ...
 
@@ -143,7 +145,7 @@ if __name__ == "__main__":
     
     # TODO: Print parameter count
     # Hint: sum(p.numel() for p in model.parameters())
-    print(sum(p.numel() for p in model.parameters()))
+    print(f"parameter count: {sum(p.numel() for p in model.parameters())}")
     
     # TODO: Create optimizer (Adam is good for MLPs)
     # Hint: torch.optim.Adam(model.parameters(), lr=learning_rate)
@@ -167,6 +169,7 @@ if __name__ == "__main__":
             # Backward pass
             optimizer.zero_grad()
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
 
             total_loss += loss.item()  # Accumulate loss
